@@ -78,9 +78,6 @@ services:
     networks:
       - bw-docker
 
-volumes:
-  bw-data:
-
 networks:
   bw-universe:
     name: bw-universe
