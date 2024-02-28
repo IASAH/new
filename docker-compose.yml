@@ -1,0 +1,95 @@
+version: "3.5"
+
+services:
+  bunkerweb:
+    image: bunkerity/bunkerweb:1.5.5
+    ports:
+      - 880:8080
+      - 8443:8443
+    labels:
+      - "bunkerweb.INSTANCE=yes"
+    environment:
+      - SERVER_NAME=
+      - MULTISITE=yes
+      - DATABASE_URI=mariadb+pymysql://bunkerweb:Changeme@bw-db:3306/db
+      - API_WHITELIST_IP=127.0.0.0/8 10.20.30.0/24 192.168.0.0/24 192.168.0.0/16
+      - WHITELIST_IP=192.168.101.1 10.10.5.0/24 192.168.101.0/24 
+      - DISABLE_DEFAULT_SERVER=yes
+      - USE_CLIENT_CACHE=yes
+      - USE_GZIP=yes
+      - proxy.example.com_USE_UI=yes
+      - proxy.example.com_USE_REVERSE_PROXY=yes
+      - proxy.example.com_REVERSE_PROXY_URL=/
+      - proxy.example.com_REVERSE_PROXY_HOST=http://bunker-web-bw-ui-1:7000
+      - proxy.example.com_INTERCEPTED_ERROR_CODES=400 404 405 413 429 500 501 502 503 504
+      - UI_HOST=http://bunker-web-bw-ui-1:7000 # Change it if needed
+    networks:
+      - bw-universe
+      - bw-services
+
+  bw-scheduler:
+    image: bunkerity/bunkerweb-scheduler:1.5.5
+    depends_on:
+      - bunkerweb
+      - bw-docker
+    environment:
+      - DATABASE_URI=mariadb+pymysql://bunkerweb:Changeme@bw-db:3306/db # Remember to set a stronger password for the database
+      - DOCKER_HOST=tcp://bw-docker:2375
+    networks:
+      - bw-universe
+      - bw-docker
+
+  bw-docker:
+    image: tecnativa/docker-socket-proxy:nightly
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - CONTAINERS=1
+      - LOG_LEVEL=warning
+    networks:
+      - bw-docker
+
+  bw-ui:
+    image: bunkerity/bunkerweb-ui:1.5.5
+    depends_on:
+      - bw-docker
+    environment:
+      - DATABASE_URI=mariadb+pymysql://bunkerweb:Changeme@bw-db:3306/db # Remember to set a stronger password for the database
+      - DOCKER_HOST=tcp://bw-docker:2375
+    networks:
+      - bw-universe
+      - bw-docker
+    ports:
+      - 7000:7000
+
+  bw-db:
+    image: mariadb:10.10
+    ports:
+      - 3306:3306
+    environment:
+      - MYSQL_RANDOM_ROOT_PASSWORD=no
+      - MYSQL_ROOT_PASSWORD=Changeme
+      - MYSQL_ROOT_USER=root
+      - MYSQL_DATABASE=db
+      - MYSQL_USER=bunkerweb
+      - MYSQL_PASSWORD=Changeme # Remember to set a stronger password for the database
+    volumes:
+      - bw-data:/var/lib/mysql
+    networks:
+      - bw-docker
+
+volumes:
+  bw-data:
+
+networks:
+  bw-universe:
+    name: bw-universe
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.20.30.0/24
+  bw-services:
+    name: bw-services
+  bw-docker:
+    name: bw-docker
+    
