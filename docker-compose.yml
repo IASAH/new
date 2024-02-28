@@ -23,9 +23,12 @@ services:
       - proxy.example.com_REVERSE_PROXY_HOST=http://bunker-web-bw-ui-1:7000
       - proxy.example.com_INTERCEPTED_ERROR_CODES=400 404 405 413 429 500 501 502 503 504
       - UI_HOST=http://bunker-web-bw-ui-1:7000 # Change it if needed
+      - USE_CLAMAV=yes #for CalmAV Plugin
+      - CLAMAV_HOST=clamav #for CalmAV Plugin
     networks:
       - bw-universe
       - bw-services
+      - bw-plugins
 
   bw-scheduler:
     image: bunkerity/bunkerweb-scheduler:1.5.5
@@ -78,6 +81,13 @@ services:
     networks:
       - bw-docker
 
+  clamav:
+    image: clamav/clamav:1.2
+    volumes:
+      - ./clamav-data:/var/lib/clamav
+    networks:
+      - bw-plugins
+
 networks:
   bw-universe:
     name: bw-universe
@@ -89,4 +99,5 @@ networks:
     name: bw-services
   bw-docker:
     name: bw-docker
-    
+  bw-plugins:
+    name: bw-plugins
